@@ -1,0 +1,46 @@
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    gitlab_server: "{{lookup('file', './gitlab_server.out')}}"
+
+  tasks:
+  - name: Source all client systems
+    command: cat ./client_instances.out
+    register: client_systems
+
+  - name: Source all tower servers
+    command: cat ./tower_servers.out
+    register: tower_servers
+
+  - name: Source gitlab users
+    command: cat ./gitlab_users.out
+    register: gitlab_users
+
+  - name: Divide all client systems in groups by 3
+    set_fact:
+      batches: "{{ client_systems.stdout_lines | batch(3)|list }}"
+
+  - name: Creating a list of dicts containing all needed information from various files
+    set_fact:
+      final_list: "{{ final_list|default([]) + [ {'tower_server': item.0, 'client1': item.1, 'client2': item.2, 'client3': item.3, 'gitlab_user': item.4 } ] }}"
+    with_together:
+      - "{{ tower_servers.stdout_lines }}"
+      - "{{ batches }}"
+      - "{{ gitlab_users.stdout_lines }}"
+
+  - name: debug final_list
+    debug:
+      msg: "tower: {{ item.tower_server }} clients: {{ item.client1 }}"
+    with_list: "{{ final_list }}"
+
+  - name: Parse CSV To YAML
+    template:
+      src: "./templates/mapping.j2"
+      dest: "./student_information.out"
+    run_once: true
+
+  #- name: debug final_list
+  #  debug:
+  #    msg: "user: {{ item.name }} tower: {{ item.tower_server }} clients: {{ item.client1 }}"
+  #  with_list: "{{ final_list }}"

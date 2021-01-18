@@ -1,0 +1,38 @@
+---
+
+- name: setup stuff in Gitlab VMs
+  hosts: git
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: wait for system to be up
+      wait_for_connection:
+        timeout: 600
+
+    - name: install gitlab
+      include_role:
+        name: gitlab
+      vars:
+        gitlab_email_enabled: "false"
+        gitlab_email_from: "{{gitlab_email}}"
+        gitlab_email_display_name: "Gitlab"
+        gitlab_email_reply_to: "{{gitlab_email}}"
+        gitlab_external_url: "https://{{ fqdn }}"
+
+    - name: print git server url
+      debug: msg="https://{{ fqdn }}"
+
+    - name: Print Gitlab FQDN to ./gitlab_server.out
+      lineinfile:
+        path: ./gitlab_server.out
+        line: "https://{{ fqdn }}"
+        create: yes
+      delegate_to: 127.0.0.1
+
+    - name: Print Gitlab username to ./gitlab_users.out
+      lineinfile:
+        path: ./gitlab_users.out
+        line: "student{{ item }}"
+        create: yes
+      with_sequence: start=1 end={{number_of_tower_systems|int}}
+      delegate_to: 127.0.0.1

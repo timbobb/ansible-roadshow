@@ -1,0 +1,15 @@
+- name: Create directory and restart Nginx
+  hosts: lbservers
+  tasks:
+    - name: Create directory
+      file:
+        path: /tmp/logs
+        state: directory
+      register: created_dir
+
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+      become:true
+      when: created_dir.changed
